@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Odd / Even Turnover Calculator</title>
+<style>
+* { box-sizing: border-box; font-family: Arial, sans-serif; }
+body {
+  background: #0f172a; min-height: 100vh;
+  display: flex; justify-content: center; align-items: center;
+  color: white; padding: 20px; margin: 0;
+}
+.cw  { width: 100%; max-width: 440px; }
+.cc  { background: #1e293b; border: 1px solid #334155; border-radius: 16px; overflow: hidden; }
+.ch  { padding: .9rem 1.25rem .75rem; border-bottom: 1px solid #334155; display: flex; align-items: center; gap: 8px; }
+.ch h3 { margin: 0; font-size: 15px; font-weight: 500; color: #f1f5f9; flex: 1; }
+.reset-btn { background: none; border: 1px solid #334155; border-radius: 8px; padding: 5px 8px; cursor: pointer; color: #94a3b8; font-size: 12px; }
+.reset-btn:hover { background: #0f172a; color: #f1f5f9; }
+.switch { position: relative; display: inline-block; width: 32px; height: 18px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; inset: 0; background: #334155; border-radius: 18px; transition: .25s; }
+.slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .25s; }
+input:checked + .slider { background: #0ea5e9; }
+input:checked + .slider:before { transform: translateX(14px); }
+.toggle-inline { display: flex; align-items: center; gap: 6px; }
+.toggle-inline span { font-size: 11px; color: #94a3b8; white-space: nowrap; }
+.cb  { padding: 1.1rem 1.25rem; }
+.frow { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: .9rem; }
+.fd  { display: flex; flex-direction: column; gap: 4px; }
+.fd label { font-size: 11px; color: #94a3b8; font-weight: 500; letter-spacing: .03em; text-transform: uppercase; }
+.fd input { padding: 8px 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #f1f5f9; font-size: 14px; font-weight: 500; width: 100%; outline: none; }
+.fd input:focus { border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(56,189,248,0.15); }
+.cbtn { width: 100%; padding: 10px; border-radius: 8px; border: none; background: #0ea5e9; color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; }
+.cbtn:hover { background: #0284c7; }
+.res { margin-top: .9rem; display: none; }
+.rdiv { height: 1px; background: #334155; margin: .75rem 0; }
+.rounds { display: flex; flex-direction: column; gap: 8px; margin-bottom: .75rem; }
+.rcard { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: .7rem .9rem; }
+.rlabel { font-size: 11px; color: #64748b; font-weight: 500; letter-spacing: .03em; text-transform: uppercase; margin-bottom: 8px; }
+.stakes { display: flex; gap: 8px; }
+.stake-pill { flex: 1; border-radius: 8px; padding: 7px 10px; display: flex; justify-content: space-between; align-items: center; }
+.stake-pill.odd  { background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); }
+.stake-pill.even { background: rgba(34,197,94,0.1);  border: 1px solid rgba(34,197,94,0.3);  }
+.sp-side { font-size: 11px; font-weight: 500; }
+.stake-pill.odd  .sp-side { color: #38bdf8; }
+.stake-pill.even .sp-side { color: #22c55e; }
+.sp-val { font-size: 14px; font-weight: 500; }
+.stake-pill.odd  .sp-val { color: #38bdf8; }
+.stake-pill.even .sp-val { color: #22c55e; }
+.summary { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.si { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: .7rem; text-align: center; }
+.si-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 4px; }
+.si-val   { font-size: 18px; font-weight: 500; }
+.si.total .si-val { color: #f1f5f9; }
+.si.loss  .si-val { color: #f87171; }
+.si.to    .si-val { color: #22c55e; }
+</style>
+</head>
+<body>
+<div class="cw"><div class="cc">
+  <div class="ch">
+    <h3>Odd / Even Turnover Calculator</h3>
+    <div class="toggle-inline">
+      <span>Last &gt;15</span>
+      <label class="switch"><input type="checkbox" id="v-min15" checked><span class="slider"></span></label>
+    </div>
+    <button class="reset-btn" onclick="doReset()">&#8635; Reset</button>
+  </div>
+  <div class="cb">
+    <div class="frow">
+      <div class="fd"><label>Balance</label><input id="v-bal" type="number" value="" step="1"></div>
+      <div class="fd"><label>Odds</label><input id="v-odd" type="number" value="" step="0.01"></div>
+      <div class="fd"><label>Target T/O</label><input id="v-tgt" type="number" value="" step="1"></div>
+    </div>
+    <button class="cbtn" onclick="doCalc()">Calculate</button>
+    <div class="res" id="v-res">
+      <div class="rdiv"></div>
+      <div class="rounds" id="v-rounds"></div>
+      <div class="summary">
+        <div class="si total"><div class="si-label">Total stake</div><div class="si-val" id="v-stake">-</div></div>
+        <div class="si loss"> <div class="si-label">Total loss</div> <div class="si-val" id="v-loss">-</div></div>
+        <div class="si to">   <div class="si-label">Final T/O</div>  <div class="si-val" id="v-to">-</div></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+var CFG = {
+  defaultBalance : 200,
+  defaultOdds    : 1.96,
+  defaultTarget  : 300,
+  minLastStake   : 30.2,
+  minLastRand    : 0.3,
+  spreadMin      : 1,
+  spreadRand     : 4,
+  maxRounds      : 10,
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
+function doReset(){
+  document.getElementById('v-bal').value = CFG.defaultBalance;
+  document.getElementById('v-odd').value = CFG.defaultOdds;
+  document.getElementById('v-tgt').value = CFG.defaultTarget;
+  document.getElementById('v-res').style.display = 'none';
+  document.getElementById('v-rounds').innerHTML = '';
+}
+
+function doCalc(){
+  var balance = +document.getElementById('v-bal').value;
+  var odd     = +document.getElementById('v-odd').value;
+  var target  = +document.getElementById('v-tgt').value;
+  var pr = odd / 2;
+  var forceMin15 = document.getElementById('v-min15').checked;
+  var MAX = CFG.maxRounds;
+
+  function splitStake(s){
+    var totalCents = Math.floor(s * 100);
+    var spread = Math.floor(Math.random() * 8) + 2;
+    var oddCents = Math.floor((totalCents - spread) / 2);
+    var evCents  = oddCents + spread;
+    var intPart = Math.floor(oddCents / 100);
+    var lo = intPart * 100 + 1;
+    var hi = intPart * 100 + 99;
+    if(evCents > hi){ evCents = hi; oddCents = evCents - spread; }
+    if(oddCents < lo){ oddCents = lo; evCents = oddCents + spread; }
+    if(oddCents + evCents > totalCents){ oddCents--; evCents--; }
+    return { odd: oddCents / 100, even: evCents / 100 };
+  }
+
+  var rounds   = [];
+  var totalTO  = 0;
+  var bal      = balance;
+
+  for(var i = 0; i < MAX; i++){
+    var toThis = bal * pr;
+
+    if(totalTO + toThis >= target){
+      var needed = target - totalTO;
+      var fs = +(needed / pr + (CFG.spreadMin + Math.random() * CFG.spreadRand) / pr).toFixed(2);
+      if(fs < 0) fs = 0;
+
+      if(forceMin15 && (fs / 2) < (CFG.minLastStake / 2)){
+        var minS = +(CFG.minLastStake + Math.random() * CFG.minLastRand).toFixed(2);
+        var extraTO = (minS - fs) * pr;
+        for(var j = 0; j < rounds.length && extraTO > 0.001; j++){
+          var canReduce = rounds[j].stake * pr;
+          var cut = Math.min(extraTO, canReduce);
+          rounds[j].stake = +Math.max(0, rounds[j].stake - cut / pr).toFixed(2);
+          var sp = splitStake(rounds[j].stake);
+          rounds[j].oddVal  = sp.odd;
+          rounds[j].evenVal = sp.even;
+          extraTO -= cut;
+        }
+        fs = minS;
+      }
+
+      var spLast = splitStake(fs);
+      rounds.push({ stake: fs, oddVal: spLast.odd, evenVal: spLast.even });
+      totalTO += fs * pr;
+      break;
+    }
+
+    var sp = splitStake(bal);
+    rounds.push({ stake: bal, oddVal: sp.odd, evenVal: sp.even });
+    totalTO += toThis;
+
+    bal = +(sp.even * odd).toFixed(2);
+  }
+
+  var totalStake = rounds.reduce(function(a, r){ return a + r.stake; }, 0);
+  var totalLoss  = +(totalStake * (1 - pr)).toFixed(2);
+  var finalTO    = +(rounds.reduce(function(a, r){ return a + r.stake * pr; }, 0)).toFixed(2);
+
+  var labels = ['1st','2nd','3rd','4th','5th','6th','7th','8th','9th','10th'];
+  var c = document.getElementById('v-rounds');
+  c.innerHTML = '';
+  rounds.forEach(function(r, i){
+    c.innerHTML +=
+      '<div class="rcard"><div class="rlabel">' + (labels[i] || (i + 1) + 'th') + ' round</div>' +
+      '<div class="stakes">' +
+      '<div class="stake-pill odd"><span class="sp-side">Odd</span><span class="sp-val">$' + r.oddVal.toFixed(2) + '</span></div>' +
+      '<div class="stake-pill even"><span class="sp-side">Even</span><span class="sp-val">$' + r.evenVal.toFixed(2) + '</span></div>' +
+      '</div></div>';
+  });
+  document.getElementById('v-stake').textContent = '$' + totalStake.toFixed(2);
+  document.getElementById('v-loss').textContent  = '$' + totalLoss.toFixed(2);
+  document.getElementById('v-to').textContent    = '$' + finalTO.toFixed(2);
+  document.getElementById('v-res').style.display = 'block';
+}
+
+window.onload = function(){
+  document.getElementById('v-bal').value = CFG.defaultBalance;
+  document.getElementById('v-odd').value = CFG.defaultOdds;
+  document.getElementById('v-tgt').value = CFG.defaultTarget;
+};
+</script>
+</body>
+</html>
