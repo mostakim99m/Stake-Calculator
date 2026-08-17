@@ -88,7 +88,7 @@ input:checked + .slider:before { transform: translateX(14px); }
 <script>
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 var CFG = {
-  defaultBalance : 200,
+  defaultBalance : 300,
   defaultOdds    : 1.96,
   defaultTarget  : 300,
   minLastStake   : 30.2,
@@ -141,8 +141,9 @@ function doCalc(){
       var fs = +(needed / pr + (CFG.spreadMin + Math.random() * CFG.spreadRand) / pr).toFixed(2);
       if(fs < 0) fs = 0;
 
-      if(forceMin15 && (fs / 2) < (CFG.minLastStake / 2)){
-        var minS = +(CFG.minLastStake + Math.random() * CFG.minLastRand).toFixed(2);
+      if(forceMin15 && (fs / 2) < 15){
+        var minHalf = 15 + Math.random() * 3; // half: 15–18, so full: 30–36
+        var minS = +(minHalf * 2).toFixed(2);
         var extraTO = (minS - fs) * pr;
         for(var j = 0; j < rounds.length && extraTO > 0.001; j++){
           var canReduce = rounds[j].stake * pr;
