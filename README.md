@@ -1,1 +1,1 @@
-# Sstake-Calculator
+# Stake-Calculator
