@@ -63,7 +63,8 @@ input:checked + .slider:before { transform: translateX(14px); }
     <h3>Odd / Even Turnover Calculator</h3>
     <div class="toggle-inline">
       <span>Last &gt;15</span>
-      <label class="switch"><input type="checkbox" id="v-min15" checked><span class="slider"></span></label>
+      <label class="switch"><input type="checkbox" id="v-min15"><span class="slider"></span></label>
+      <script>(function(){ var v=localStorage.getItem('sc_min15'); document.getElementById('v-min15').checked = v===null ? true : v==='1'; })();</script>
     </div>
     <button class="reset-btn" onclick="doReset()">&#8635; Reset</button>
   </div>
@@ -88,7 +89,7 @@ input:checked + .slider:before { transform: translateX(14px); }
 <script>
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 var CFG = {
-  defaultBalance : 300,
+  defaultBalance : 200,
   defaultOdds    : 1.96,
   defaultTarget  : 300,
   minLastStake   : 30.2,
@@ -103,8 +104,13 @@ function doReset(){
   document.getElementById('v-bal').value = CFG.defaultBalance;
   document.getElementById('v-odd').value = CFG.defaultOdds;
   document.getElementById('v-tgt').value = CFG.defaultTarget;
+  document.getElementById('v-min15').checked = true;
   document.getElementById('v-res').style.display = 'none';
   document.getElementById('v-rounds').innerHTML = '';
+  localStorage.removeItem('sc_bal');
+  localStorage.removeItem('sc_odd');
+  localStorage.removeItem('sc_tgt');
+  localStorage.removeItem('sc_min15');
 }
 
 function doCalc(){
@@ -191,10 +197,27 @@ function doCalc(){
   document.getElementById('v-res').style.display = 'block';
 }
 
+function saveInputs(){
+  localStorage.setItem('sc_bal',  document.getElementById('v-bal').value);
+  localStorage.setItem('sc_odd',  document.getElementById('v-odd').value);
+  localStorage.setItem('sc_tgt',  document.getElementById('v-tgt').value);
+  localStorage.setItem('sc_min15', document.getElementById('v-min15').checked ? '1' : '0');
+}
+
 window.onload = function(){
-  document.getElementById('v-bal').value = CFG.defaultBalance;
-  document.getElementById('v-odd').value = CFG.defaultOdds;
-  document.getElementById('v-tgt').value = CFG.defaultTarget;
+  var bal  = localStorage.getItem('sc_bal');
+  var odd  = localStorage.getItem('sc_odd');
+  var tgt  = localStorage.getItem('sc_tgt');
+  var m15  = localStorage.getItem('sc_min15');
+  document.getElementById('v-bal').value   = bal  !== null ? bal  : CFG.defaultBalance;
+  document.getElementById('v-odd').value   = odd  !== null ? odd  : CFG.defaultOdds;
+  document.getElementById('v-tgt').value   = tgt  !== null ? tgt  : CFG.defaultTarget;
+  document.getElementById('v-min15').checked = m15 !== null ? m15 === '1' : true;
+
+  ['v-bal','v-odd','v-tgt'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', saveInputs);
+  });
+  document.getElementById('v-min15').addEventListener('change', saveInputs);
 };
 </script>
 </body>
