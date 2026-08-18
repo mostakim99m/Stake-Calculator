@@ -89,7 +89,7 @@ input:checked + .slider:before { transform: translateX(14px); }
 <script>
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 var CFG = {
-  defaultBalance : 200,
+  defaultBalance : 300,
   defaultOdds    : 1.96,
   defaultTarget  : 300,
   minLastStake   : 30.2,
@@ -123,21 +123,33 @@ function doCalc(){
 
   function splitStake(s){
     var totalCents = Math.floor(s * 100);
-    var spread = Math.floor(Math.random() * 8) + 2;
-    var oddCents = Math.floor((totalCents - spread) / 2);
-    var evCents  = oddCents + spread;
-    var intPart = Math.floor(oddCents / 100);
-    var lo = intPart * 100 + 1;
-    var hi = intPart * 100 + 99;
-    if(evCents > hi){ evCents = hi; oddCents = evCents - spread; }
-    if(oddCents < lo){ oddCents = lo; evCents = oddCents + spread; }
-    if(oddCents + evCents > totalCents){ oddCents--; evCents--; }
-    return { odd: oddCents / 100, even: evCents / 100 };
+    // spread: 2–8 cents between the two halves
+    var spread  = Math.floor(Math.random() * 7) + 2;
+    // Both lo and hi must share the same dollar (floor/100).
+    // Use the highest dollar band that fits: base = floor((half - spread) / 100) * 100
+    var half    = Math.floor(totalCents / 2);
+    var base    = Math.floor((half - spread) / 100) * 100;
+    if(base < 0) base = 0;
+    // lo in [base, base+99-spread], hi = lo+spread — both stay in same dollar band
+    var loMax   = Math.min(base + 99 - spread, half - spread);
+    if(loMax < base) loMax = base;
+    var loCents = base + Math.floor(Math.random() * (loMax - base + 1));
+    var hiCents = loCents + spread;
+    // safety: sum must not exceed totalCents
+    if(loCents + hiCents > totalCents){ hiCents = totalCents - loCents; }
+    // randomly decide which side (odd/even) gets the smaller amount
+    var oddFirst = Math.random() < 0.5;
+    return {
+      odd:  (oddFirst ? loCents : hiCents) / 100,
+      even: (oddFirst ? hiCents : loCents) / 100
+    };
   }
 
   var rounds   = [];
   var totalTO  = 0;
   var bal      = balance;
+  // Generate ONE minS for the last round upfront so pre-reduce and enforce use same value
+  var lastMinS = forceMin15 ? +((15 + Math.random() * 3) * 2).toFixed(2) : 0;
 
   for(var i = 0; i < MAX; i++){
     var toThis = bal * pr;
@@ -148,19 +160,24 @@ function doCalc(){
       if(fs < 0) fs = 0;
 
       if(forceMin15 && (fs / 2) < 15){
-        var minHalf = 15 + Math.random() * 3; // half: 15–18, so full: 30–36
-        var minS = +(minHalf * 2).toFixed(2);
-        var extraTO = (minS - fs) * pr;
-        for(var j = 0; j < rounds.length && extraTO > 0.001; j++){
-          var canReduce = rounds[j].stake * pr;
-          var cut = Math.min(extraTO, canReduce);
-          rounds[j].stake = +Math.max(0, rounds[j].stake - cut / pr).toFixed(2);
-          var sp = splitStake(rounds[j].stake);
-          rounds[j].oddVal  = sp.odd;
-          rounds[j].evenVal = sp.even;
-          extraTO -= cut;
+        var minS = lastMinS;
+        if(bal >= minS){
+          // absorb the extra T/O by trimming earlier rounds (backwards)
+          var extraTO = (minS - fs) * pr;
+          for(var j = rounds.length - 1; j >= 0 && extraTO > 0.001; j--){
+            var maxCut = rounds[j].stake * pr - 0.01;
+            if(maxCut <= 0) continue;
+            var cut = Math.min(extraTO, maxCut);
+            rounds[j].stake = +Math.max(0, rounds[j].stake - cut / pr).toFixed(2);
+            var rsp = splitStake(rounds[j].stake);
+            rounds[j].oddVal  = rsp.odd;
+            rounds[j].evenVal = rsp.even;
+            extraTO = +(extraTO - cut).toFixed(10);
+          }
+          fs = minS;
+        } else {
+          fs = +Math.min(fs < 0 ? 0 : fs, bal).toFixed(2);
         }
-        fs = minS;
       }
 
       var spLast = splitStake(fs);
@@ -169,9 +186,21 @@ function doCalc(){
       break;
     }
 
-    var sp = splitStake(bal);
-    rounds.push({ stake: bal, oddVal: sp.odd, evenVal: sp.even });
-    totalTO += toThis;
+    // If forceMin15 on and next round will be the last, pre-reduce this round
+    // using the same lastMinS so we don't double-random and overshoot.
+    var stakeNow = bal;
+    if(forceMin15){
+      var toAfter = target - totalTO - toThis;
+      if(toAfter < lastMinS * pr){
+        var wantTO   = lastMinS * pr;
+        var reduceTO = wantTO - toAfter;
+        var newStake = +(bal - reduceTO / pr).toFixed(2);
+        if(newStake > 0 && newStake < bal) stakeNow = newStake;
+      }
+    }
+    var sp = splitStake(stakeNow);
+    rounds.push({ stake: stakeNow, oddVal: sp.odd, evenVal: sp.even });
+    totalTO += stakeNow * pr;
 
     bal = +(sp.even * odd).toFixed(2);
   }
